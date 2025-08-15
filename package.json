@@ -1,0 +1,10 @@
+{
+  "name": "fix-exchange-simulator",
+  "version": "1.0.0",
+  "description": "Simple FIX exchange simulator with order book and UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node orderBook.test.js"
+  }
+}
