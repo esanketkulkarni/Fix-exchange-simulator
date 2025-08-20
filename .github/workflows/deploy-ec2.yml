@@ -1,0 +1,46 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (for commit SHA, not for upload)
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            export APP_DIR="${{ secrets.EC2_APP_DIR }}"
+            export REPO_URL="${{ secrets.REPO_URL }}"
+            export SERVICE_NAME="${{ secrets.SERVICE_NAME || 'fixsim' }}"
+            export BRANCH="${{ secrets.DEPLOY_BRANCH || 'main' }}"
+            sudo mkdir -p "$APP_DIR"
+            sudo chown $USER:$USER "$APP_DIR"
+
+            if [ -d "$APP_DIR/app/.git" ]; then
+              cd "$APP_DIR/app"
+              git fetch --all --prune
+              git checkout "$BRANCH"
+              git reset --hard origin/"$BRANCH"
+            else
+              cd "$APP_DIR"
+              git clone "$REPO_URL" app
+              cd app
+              git checkout "$BRANCH" || true
+            fi
+
+            chmod +x scripts/deploy_ec2.sh
+            ./scripts/deploy_ec2.sh "$SERVICE_NAME"
+
